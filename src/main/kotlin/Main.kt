@@ -53,7 +53,7 @@ suspend fun handleClient(client: Socket, maxFib: Int?) {
             val number = withContext(Dispatchers.IO) {
                 input.readInt()
             }
-            if (maxFib != null && number > maxFib) {
+            if (maxFib != null && abs(number) > maxFib) {
                 withContext(Dispatchers.IO) {
                     output.writeUTF("Error: Number exceeds maximum limit of $maxFib.\n")
                 }
