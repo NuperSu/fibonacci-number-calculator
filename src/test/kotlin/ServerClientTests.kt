@@ -14,8 +14,7 @@ import java.net.Socket
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 
-class ServerClientTests {
-    // Test the Fibonacci calculation for correctness
+class FibonacciTests {
     @ParameterizedTest
     @CsvSource(
         "0, 0",
@@ -35,10 +34,12 @@ class ServerClientTests {
         "-1000, -43466557686937456435688527675040625802564660517371780402481729089536555417949051890403879840079255169295922593080322634775209689623239873322471161642996440906533187938298969649928516003704476137795166849228875"
     )
     fun testFibonacci(input: Int, expected: BigInteger) {
-        assertEquals(expected, fibonacci(input), "Fibonacci calculation failed for input $input")
+        assertEquals(expected, fibonacci(input), "Fibonacci of $input should be $expected.")
     }
+}
 
-    // Test the client-server communication to ensure that the server handles client requests correctly
+class ClientServerCommunicationTests {
+
     @Test
     fun testClientServerCommunication() = runBlocking {
         val clientOutStream = ByteArrayOutputStream()
