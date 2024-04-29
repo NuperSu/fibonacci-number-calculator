@@ -5,6 +5,7 @@ import java.io.DataOutputStream
 import java.math.BigInteger
 import java.net.ServerSocket
 import java.net.Socket
+import kotlinx.coroutines.*
 
 fun fibonacci(n: Int): BigInteger {
     var a = BigInteger.ZERO
@@ -17,34 +18,42 @@ fun fibonacci(n: Int): BigInteger {
     return b
 }
 
-fun runServer(port: Int, maxFib: Int? = null) {
+fun runServer(port: Int, maxFib: Int? = null) = runBlocking {
     val server = ServerSocket(port)
     println("Server running on port $port, max Fibonacci number set to: ${maxFib ?: "No limit"}")
 
-    while (true) {
-        val client = server.accept()
-        Thread {
-            val input = DataInputStream(client.getInputStream())
-            val output = DataOutputStream(client.getOutputStream())
-
-            try {
-                while (true) {
-                    val number = input.readInt()
-                    if (number < 0) {
-                        output.writeUTF("Error: Number must be a positive integer.\n")
-                    } else if (maxFib != null && number > maxFib) {
-                        output.writeUTF("Error: Number exceeds maximum limit of $maxFib.\n")
-                    } else {
-                        val fibResult = fibonacci(number)
-                        output.writeUTF("$fibResult\n")
-                    }
-                }
-            } catch (e: Exception) {
-                println("Client disconnected")
-            } finally {
-                client.close()
+    coroutineScope {
+        while (isActive) {
+            val client = server.accept()
+            launch(Dispatchers.IO) {
+                handleClient(client, maxFib)
             }
-        }.start()
+        }
+    }
+}
+
+suspend fun handleClient(client: Socket, maxFib: Int?) {
+    val input = DataInputStream(client.getInputStream())
+    val output = DataOutputStream(client.getOutputStream())
+
+    try {
+        while (true) {
+            val number = input.readInt()
+            if (number < 0) {
+                output.writeUTF("Error: Number must be a positive integer.\n")
+            } else if (maxFib != null && number > maxFib) {
+                output.writeUTF("Error: Number exceeds maximum limit of $maxFib.\n")
+            } else {
+                val fibResult = withContext(Dispatchers.Default) {
+                    fibonacci(number)
+                }
+                output.writeUTF("$fibResult\n")
+            }
+        }
+    } catch (e: Exception) {
+        println("Client disconnected")
+    } finally {
+        client.close()
     }
 }
 
