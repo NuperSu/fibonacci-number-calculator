@@ -17,9 +17,9 @@ fun fibonacci(n: Int): BigInteger {
     return b
 }
 
-fun runServer(port: Int) {
+fun runServer(port: Int, maxFib: Int? = null) {
     val server = ServerSocket(port)
-    println("Server running on port $port")
+    println("Server running on port $port, max Fibonacci number set to: ${maxFib ?: "No limit"}")
 
     while (true) {
         val client = server.accept()
@@ -31,7 +31,9 @@ fun runServer(port: Int) {
                 while (true) {
                     val number = input.readInt()
                     if (number < 0) {
-                        output.writeUTF("Must be a positive number\n")
+                        output.writeUTF("Error: Number must be a positive integer.\n")
+                    } else if (maxFib != null && number > maxFib) {
+                        output.writeUTF("Error: Number exceeds maximum limit of $maxFib.\n")
                     } else {
                         val fibResult = fibonacci(number)
                         output.writeUTF("$fibResult\n")
@@ -56,10 +58,14 @@ fun runClient(host: String, port: Int) {
         val userInput = readLine() ?: ""
         if (userInput.isBlank()) break
 
-        val number = userInput.toInt()
-        output.writeInt(number)
-        val result = input.readUTF()
-        println("Fibonacci result: $result")
+        try {
+            val number = userInput.toInt()
+            output.writeInt(number)
+            val result = input.readUTF()
+            println("Fibonacci result: $result")
+        } catch (e: NumberFormatException) {
+            println("Invalid input. Please enter a valid integer.")
+        }
     }
 
     client.close()
@@ -67,12 +73,18 @@ fun runClient(host: String, port: Int) {
 
 fun main(args: Array<String>) {
     if (args.size < 2) {
-        println("Usage: java -jar fibonacci.jar server <port> | client <host> <port>")
+        println("Usage: java -jar fibonacci.jar [server <port> [maxFib]] | [client <host> <port>]")
+        println("    server: Runs the server on the given port. Optionally specify a max Fibonacci number.")
+        println("    client: Connects to the server at <host>:<port> and starts the client.")
         return
     }
 
     when (args[0]) {
-        "server" -> runServer(args[1].toInt())
+        "server" -> {
+            val port = args[1].toInt()
+            val maxFib = args.getOrNull(2)?.toInt()
+            runServer(port, maxFib)
+        }
         "client" -> runClient(args[1], args[2].toInt())
         else -> println("Invalid mode. Use 'server' or 'client'.")
     }
