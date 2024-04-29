@@ -1,11 +1,11 @@
 package org.example
 
+import kotlinx.coroutines.*
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.math.BigInteger
 import java.net.ServerSocket
 import java.net.Socket
-import kotlinx.coroutines.*
 
 fun fibonacci(n: Int): BigInteger {
     var a = BigInteger.ZERO
@@ -33,27 +33,41 @@ fun runServer(port: Int, maxFib: Int? = null) = runBlocking {
 }
 
 suspend fun handleClient(client: Socket, maxFib: Int?) {
-    val input = DataInputStream(client.getInputStream())
-    val output = DataOutputStream(client.getOutputStream())
+    val input = DataInputStream(withContext(Dispatchers.IO) {
+        client.getInputStream()
+    })
+    val output = DataOutputStream(withContext(Dispatchers.IO) {
+        client.getOutputStream()
+    })
 
     try {
         while (true) {
-            val number = input.readInt()
+            val number = withContext(Dispatchers.IO) {
+                input.readInt()
+            }
             if (number < 0) {
-                output.writeUTF("Error: Number must be a positive integer.\n")
+                withContext(Dispatchers.IO) {
+                    output.writeUTF("Error: Number must be a positive integer.\n")
+                }
             } else if (maxFib != null && number > maxFib) {
-                output.writeUTF("Error: Number exceeds maximum limit of $maxFib.\n")
+                withContext(Dispatchers.IO) {
+                    output.writeUTF("Error: Number exceeds maximum limit of $maxFib.\n")
+                }
             } else {
                 val fibResult = withContext(Dispatchers.Default) {
                     fibonacci(number)
                 }
-                output.writeUTF("$fibResult\n")
+                withContext(Dispatchers.IO) {
+                    output.writeUTF("$fibResult\n")
+                }
             }
         }
     } catch (e: Exception) {
         println("Client disconnected")
     } finally {
-        client.close()
+        withContext(Dispatchers.IO) {
+            client.close()
+        }
     }
 }
 
@@ -64,7 +78,7 @@ fun runClient(host: String, port: Int) {
 
     while (true) {
         print("Enter a number (blank to exit): ")
-        val userInput = readLine() ?: ""
+        val userInput = readlnOrNull() ?: ""
         if (userInput.isBlank()) break
 
         try {
@@ -94,6 +108,7 @@ fun main(args: Array<String>) {
             val maxFib = args.getOrNull(2)?.toInt()
             runServer(port, maxFib)
         }
+
         "client" -> runClient(args[1], args[2].toInt())
         else -> println("Invalid mode. Use 'server' or 'client'.")
     }
