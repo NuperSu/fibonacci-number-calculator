@@ -2,12 +2,13 @@ package org.example
 
 import java.io.DataInputStream
 import java.io.DataOutputStream
+import java.math.BigInteger
 import java.net.ServerSocket
 import java.net.Socket
 
-fun fibonacci(n: Int): Long {
-    var a = 0L
-    var b = 1L
+fun fibonacci(n: Int): BigInteger {
+    var a = BigInteger.ZERO
+    var b = BigInteger.ONE
     for (i in 2..n) {
         val sum = a + b
         a = b
@@ -29,8 +30,12 @@ fun runServer(port: Int) {
             try {
                 while (true) {
                     val number = input.readInt()
-                    val fibResult = fibonacci(number)
-                    output.writeUTF("$fibResult\n")
+                    if (number < 0) {
+                        output.writeUTF("Must be a positive number\n")
+                    } else {
+                        val fibResult = fibonacci(number)
+                        output.writeUTF("$fibResult\n")
+                    }
                 }
             } catch (e: Exception) {
                 println("Client disconnected")
