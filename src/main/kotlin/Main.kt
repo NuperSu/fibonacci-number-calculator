@@ -6,15 +6,23 @@ import java.io.DataOutputStream
 import java.math.BigInteger
 import java.net.ServerSocket
 import java.net.Socket
+import kotlin.math.abs
 
 fun fibonacci(n: Int): BigInteger {
+    if (n == 0) return BigInteger.ZERO
+
     var a = BigInteger.ZERO
     var b = BigInteger.ONE
-    for (i in 2..n) {
+    for (i in 2..abs(n)) {
         val sum = a + b
         a = b
         b = sum
     }
+
+    if (n < 0 && n % 2 == 0) {
+        b = b.negate()
+    }
+
     return b
 }
 
@@ -45,11 +53,7 @@ suspend fun handleClient(client: Socket, maxFib: Int?) {
             val number = withContext(Dispatchers.IO) {
                 input.readInt()
             }
-            if (number < 0) {
-                withContext(Dispatchers.IO) {
-                    output.writeUTF("Error: Number must be a positive integer.\n")
-                }
-            } else if (maxFib != null && number > maxFib) {
+            if (maxFib != null && number > maxFib) {
                 withContext(Dispatchers.IO) {
                     output.writeUTF("Error: Number exceeds maximum limit of $maxFib.\n")
                 }
