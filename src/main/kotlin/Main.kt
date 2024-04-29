@@ -26,7 +26,7 @@ fun fibonacci(n: Int): BigInteger {
     return b
 }
 
-fun runServer(port: Int, maxFib: Int? = null) = runBlocking {
+fun runServer(port: Int, maxFib: Int) = runBlocking {
     val server = ServerSocket(port)
     println("Server running on port $port, max Fibonacci number set to: ${maxFib ?: "No limit"}")
 
@@ -109,7 +109,8 @@ fun main(args: Array<String>) {
     when (args[0]) {
         "server" -> {
             val port = args[1].toInt()
-            val maxFib = args.getOrNull(2)?.toInt()
+            // All Fibonacci numbers lower -313579 and higher 313580 cause an EOFException to the client in readUTF function
+            val maxFib = args.getOrNull(2)?.toInt() ?: 313580
             runServer(port, maxFib)
         }
 
