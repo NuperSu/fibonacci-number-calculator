@@ -98,6 +98,8 @@ fun runClient(host: String, port: Int) {
     client.close()
 }
 
+const val MAX_FIBONACCI = 313579
+
 fun main(args: Array<String>) {
     if (args.size < 2) {
         println("Usage: java -jar fibonacci.jar [server <port> [maxFib]] | [client <host> <port>]")
@@ -110,7 +112,11 @@ fun main(args: Array<String>) {
         "server" -> {
             val port = args[1].toInt()
             // All Fibonacci numbers lower -313579 and higher 313580 cause an EOFException to the client in readUTF function
-            val maxFib = args.getOrNull(2)?.toInt() ?: 313580
+            val maxFib = args.getOrNull(2)?.toInt() ?: MAX_FIBONACCI
+            if (maxFib > MAX_FIBONACCI) {
+                println("Max Fibonacci number cannot exceed $MAX_FIBONACCI or the client could throw an EOFException.")
+                return
+            }
             runServer(port, maxFib)
         }
 
