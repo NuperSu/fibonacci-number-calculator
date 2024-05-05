@@ -135,22 +135,50 @@ suspend fun requestFibonacci(host: String, port: Int, number: Int): String {
 @Composable
 fun ServerUI(port: String) {
     var text by remember { mutableStateOf(port) }
+    var maxFibonacci by remember { mutableStateOf(MAX_FIBONACCI.toString()) } // Store as String for easy TextField handling
     var serverLog by remember { mutableStateOf("Server is not running") }
     val coroutineScope = rememberCoroutineScope()
 
-    Text("Enter port to start server:")
-    Row {
-        BasicTextField(value = text, onValueChange = { text = it })
-        Button(onClick = {
-            coroutineScope.launch {
-                serverLog = "Server running on port $text"
-                runServer(text.toInt(), MAX_FIBONACCI)
+    Column {
+        Text("Enter port to start server:")
+        BasicTextField(
+            value = text,
+            onValueChange = { text = it },
+            singleLine = true
+        )
+        Text("Max Fibonacci number (optional):")
+        BasicTextField(
+            value = maxFibonacci,
+            onValueChange = { maxFibonacci = it },
+            singleLine = true
+        )
+        Row {
+            Button(onClick = {
+                val portNumber = text.toIntOrNull() ?: 0 // Safely parse the port number
+                val maxFib = maxFibonacci.toIntOrNull() ?: MAX_FIBONACCI // Safely parse the max Fibonacci number
+                coroutineScope.launch {
+                    // Update UI immediately before launching the server
+                    serverLog = "Attempting to start server on port $text with max Fibonacci set to $maxFib"
+                }
+                // Launch server in a non-blocking manner
+                GlobalScope.launch(Dispatchers.IO) {
+                    try {
+                        runServer(portNumber, maxFib)
+                        withContext(Dispatchers.Main) {
+                            serverLog = "Server running on port $text with max Fibonacci set to $maxFib"
+                        }
+                    } catch (e: Exception) {
+                        withContext(Dispatchers.Main) {
+                            serverLog = "Failed to start server: ${e.message}"
+                        }
+                    }
+                }
+            }) {
+                Text("Start Server")
             }
-        }) {
-            Text("Start Server")
         }
+        Text(serverLog, modifier = Modifier.padding(top = 20.dp))
     }
-    Text(serverLog, modifier = Modifier.padding(top = 20.dp))
 }
 
 @Composable
