@@ -169,13 +169,8 @@ fun ServerUI(port: String) {
                     serverJob = GlobalScope.launch(Dispatchers.IO) {  // Launch on IO Dispatcher
                         try {
                             runServer(portNumber, maxFib)
-                            withContext(Dispatchers.Main) {
-                                serverLog = "Server running on port $text with max Fibonacci set to $maxFib"
-                            }
                         } catch (e: Exception) {
-                            withContext(Dispatchers.Main) {
-                                serverLog = "Failed to start server: ${e.message}"
-                            }
+                            serverLog = "Failed to start server: ${e.message}"
                         }
                     }
                 }
