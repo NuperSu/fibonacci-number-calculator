@@ -3,6 +3,7 @@ package org.example
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.Button
+import androidx.compose.material.Switch
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -99,49 +100,69 @@ suspend fun requestFibonacci(host: String, port: Int, number: Int): String {
     }
 }
 
+@Composable
+fun ServerUI() {
+    var text by remember { mutableStateOf("") }
+    var serverLog by remember { mutableStateOf("Server is not running") }
+    val coroutineScope = rememberCoroutineScope()
+
+    Text("Enter port to start server:")
+    Row {
+        BasicTextField(value = text, onValueChange = { text = it })
+        Button(onClick = {
+            coroutineScope.launch {
+                serverLog = "Server running on port $text"
+                runServer(text.toInt(), 1000)
+            }
+        }) {
+            Text("Start Server")
+        }
+    }
+    Text(serverLog, modifier = Modifier.padding(top = 20.dp))
+}
+
+@Composable
+fun ClientUI() {
+    var serverIp by remember { mutableStateOf("") }
+    var port by remember { mutableStateOf("") }
+    var number by remember { mutableStateOf("") }
+    var result by remember { mutableStateOf("No result yet") }
+    val coroutineScope = rememberCoroutineScope()
+
+    Text("Server IP:")
+    BasicTextField(value = serverIp, onValueChange = { serverIp = it })
+    Text("Port:")
+    BasicTextField(value = port, onValueChange = { port = it })
+    Text("Number to calculate:")
+    BasicTextField(value = number, onValueChange = { number = it })
+    Button(onClick = {
+        coroutineScope.launch {
+            result = requestFibonacci(serverIp, port.toInt(), number.toInt())
+        }
+    }) {
+        Text("Get Fibonacci")
+    }
+    Text("Result: $result", modifier = Modifier.padding(top = 20.dp))
+}
+
 const val MAX_FIBONACCI = 313579
 
 fun main() = application {
     Window(onCloseRequest = ::exitApplication, title = "Fibonacci Server and Client") {
-        var text by remember { mutableStateOf("") }
-        var serverLog by remember { mutableStateOf("Server is not running") }
-        val coroutineScope = rememberCoroutineScope()
+        var isClient by remember { mutableStateOf(true) }
 
         Column(modifier = Modifier.padding(16.dp).fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Enter port to start server:")
-            Row {
-                BasicTextField(value = text, onValueChange = { text = it })
-                Button(onClick = {
-                    coroutineScope.launch {
-                        serverLog = "Server running on port $text"
-                        runServer(text.toInt(), 1000)
-                    }
-                }) {
-                    Text("Start Server")
-                }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Server")
+                Switch(checked = isClient, onCheckedChange = { isClient = it })
+                Text("Client")
             }
-            Text(serverLog, modifier = Modifier.padding(top = 20.dp))
 
-            // Client UI
-            var serverIp by remember { mutableStateOf("") }
-            var port by remember { mutableStateOf("") }
-            var number by remember { mutableStateOf("") }
-            var result by remember { mutableStateOf("No result yet") }
-
-            Text("Server IP:")
-            BasicTextField(value = serverIp, onValueChange = { serverIp = it })
-            Text("Port:")
-            BasicTextField(value = port, onValueChange = { port = it })
-            Text("Number to calculate:")
-            BasicTextField(value = number, onValueChange = { number = it })
-            Button(onClick = {
-                coroutineScope.launch {
-                    result = requestFibonacci(serverIp, port.toInt(), number.toInt())
-                }
-            }) {
-                Text("Get Fibonacci")
+            if (isClient) {
+                ClientUI()
+            } else {
+                ServerUI()
             }
-            Text("Result: $result", modifier = Modifier.padding(top = 20.dp))
         }
     }
 }
