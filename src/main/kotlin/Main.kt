@@ -2,13 +2,12 @@ package org.example
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material.Button
-import androidx.compose.material.Switch
-import androidx.compose.material.Text
-import androidx.compose.material.TextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
@@ -165,7 +164,8 @@ fun ServerUI(port: String) {
                 if (!isStopping) {
                     val portNumber = text.toIntOrNull() ?: 0
                     val maxFib = maxFibonacci.toIntOrNull() ?: MAX_FIBONACCI
-                    serverLog = "Attempting to start server on port $text with max Fibonacci set to $maxFib"
+                    serverLog =
+                        "Attempting to start server on port $text with max Fibonacci set to $maxFib"
 
                     if (server?.isClosed != false) {
                         server?.close()
@@ -204,28 +204,69 @@ fun ServerUI(port: String) {
 }
 
 @Composable
-fun ClientUI(ip: String, port: String, number: String, result: MutableState<String>, onRequest: (String, String, String) -> Unit) {
+fun ClientUI(
+    ip: String,
+    port: String,
+    number: String,
+    result: MutableState<String>,
+    onRequest: (String, String, String) -> Unit
+) {
     var serverIp by remember { mutableStateOf(ip) }
     var clientPort by remember { mutableStateOf(port) }
     var fibNumber by remember { mutableStateOf(number) }
     val coroutineScope = rememberCoroutineScope()
 
-    Text("Server IP:")
-    BasicTextField(value = serverIp, onValueChange = { serverIp = it })
-    Text("Port:")
-    BasicTextField(value = clientPort, onValueChange = { clientPort = it })
-    Text("Number to calculate:")
-    BasicTextField(value = fibNumber, onValueChange = { fibNumber = it })
-    Button(onClick = {
-        coroutineScope.launch {
-            val fibResult = requestFibonacci(serverIp, clientPort.toInt(), fibNumber.toInt())
-            // Directly update the result within the same coroutine context
-            result.value = fibResult
+    Column(modifier = Modifier.padding(16.dp)) {
+        Text("Server IP:", style = MaterialTheme.typography.h6)
+        OutlinedTextField(
+            value = serverIp,
+            onValueChange = { serverIp = it },
+            singleLine = true,
+            label = { Text("IP Address") }
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text("Port:", style = MaterialTheme.typography.h6)
+        OutlinedTextField(
+            value = clientPort,
+            onValueChange = { clientPort = it },
+            singleLine = true,
+            label = { Text("Port Number") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text("Number to calculate:", style = MaterialTheme.typography.h6)
+        OutlinedTextField(
+            value = fibNumber,
+            onValueChange = { fibNumber = it },
+            singleLine = true,
+            label = { Text("Fibonacci Number") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(onClick = {
+            coroutineScope.launch {
+                try {
+                    val fibResult =
+                        requestFibonacci(serverIp, clientPort.toInt(), fibNumber.toInt())
+                    result.value = fibResult
+                } catch (e: Exception) {
+                    result.value = "Error: ${e.localizedMessage}"
+                }
+            }
+        }, modifier = Modifier.fillMaxWidth()) {
+            Text("Get Fibonacci")
         }
-    }) {
-        Text("Get Fibonacci")
+
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            "Result: ${result.value}",
+            style = MaterialTheme.typography.body1,
+            modifier = Modifier.padding(top = 20.dp)
+        )
     }
-    Text("Result: ${result.value}", modifier = Modifier.padding(top = 20.dp))
 }
 
 fun launchGui(args: Array<String>) = application {
@@ -243,6 +284,7 @@ fun launchGui(args: Array<String>) = application {
                 isServer = true
                 serverPort = args.getOrNull(1) ?: ""
             }
+
             "client" -> {
                 isServer = false
                 serverIp = args.getOrNull(1) ?: ""
@@ -252,7 +294,10 @@ fun launchGui(args: Array<String>) = application {
     }
 
     Window(onCloseRequest = ::exitApplication, title = "Fibonacci Server and Client") {
-        Column(modifier = Modifier.padding(16.dp).fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            modifier = Modifier.padding(16.dp).fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Server")
                 Switch(checked = isServer, onCheckedChange = { isServer = it })
@@ -283,7 +328,8 @@ fun runCli(args: Array<String>) {
 
     when (args[0]) {
         "server" -> {
-            val port = args.getOrNull(1)?.toIntOrNull() ?: return println("Error: Port number must be provided for server.")
+            val port = args.getOrNull(1)?.toIntOrNull()
+                ?: return println("Error: Port number must be provided for server.")
             val maxFib = args.getOrNull(2)?.toIntOrNull() ?: MAX_FIBONACCI
             if (maxFib > MAX_FIBONACCI) {
                 println("Max Fibonacci number cannot exceed $MAX_FIBONACCI or the client could throw an EOFException.")
@@ -298,6 +344,7 @@ fun runCli(args: Array<String>) {
                 }
             }
         }
+
         "client" -> {
             if (args.size < 3) {
                 println("Error: Insufficient arguments for client. Usage: client <host> <port>")
@@ -308,7 +355,9 @@ fun runCli(args: Array<String>) {
 
             runBlocking {
                 runClient(host, port)
-            }        }
+            }
+        }
+
         else -> {
             println("Invalid mode. Use 'server' or 'client'.")
         }
@@ -322,6 +371,7 @@ fun main(args: Array<String>) {
         args.isEmpty() || args.contains("--gui") -> {
             launchGui(args)
         }
+
         else -> runCli(args)
     }
 }
