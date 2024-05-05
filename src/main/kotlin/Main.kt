@@ -16,6 +16,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.io.DataInputStream
 import java.io.DataOutputStream
+import java.io.IOException
 import java.math.BigInteger
 import java.net.ServerSocket
 import java.net.Socket
@@ -141,7 +142,7 @@ fun ServerUI(port: String) {
     var text by remember { mutableStateOf(port) }
     var maxFibonacci by remember { mutableStateOf(MAX_FIBONACCI.toString()) }
     var serverLog by remember { mutableStateOf("Server is not running") }
-    var serverJob by remember { mutableStateOf<Job?>(null) }
+    var server by remember { mutableStateOf<ServerSocket?>(null) }
 
     Column {
         Text("Enter port to start server:")
@@ -164,16 +165,17 @@ fun ServerUI(port: String) {
                 val maxFib = maxFibonacci.toIntOrNull() ?: MAX_FIBONACCI
                 serverLog = "Attempting to start server on port $text with max Fibonacci set to $maxFib"
 
-                if (serverJob?.isActive != true) {  // Check if the server is not already running
-                    val server = ServerSocket(portNumber)
-                    server.reuseAddress = true
-                    serverJob = GlobalScope.launch(Dispatchers.IO) {  // Launch on IO Dispatcher
+                if (server?.isClosed != false) {
+                    server?.close()
+                    server = ServerSocket(portNumber).apply { reuseAddress = true }
+                    serverLog = "Starting server on port $portNumber"
+                    CoroutineScope(Dispatchers.IO).launch {
                         try {
-                            runServer(server, maxFib)
-                        } catch (e: Exception) {
+                            server?.let { runServer(it, maxFib) }
+                        } catch (e: IOException) {
                             serverLog = "Failed to start server: ${e.message}"
                         } finally {
-                            server.close()
+                            server?.close()
                         }
                     }
                 }
@@ -181,9 +183,8 @@ fun ServerUI(port: String) {
                 Text("Start Server")
             }
             Button(onClick = {
-                serverJob?.cancel()
+                server?.close()
                 serverLog = "Server stopped"
-                serverJob = null
             }) {
                 Text("Stop Server")
             }
