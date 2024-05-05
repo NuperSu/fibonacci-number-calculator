@@ -342,14 +342,14 @@ fun launchGui(args: Array<String>) = application {
 
 fun runCli(args: Array<String>) {
     if (args.isEmpty()) {
-        println("Usage: java -jar fibonacci.jar [server <port> [maxFib]] | [client <host> <port>]")
+        println("Usage: java -jar fibonacci.jar [server <port> [maxFib]] | [client <host> <port>] [--gui]")
         return
     }
 
     when (args[0]) {
         "server" -> {
             val port = args.getOrNull(1)?.toIntOrNull()
-                ?: return println("Error: Port number must be provided for server.")
+                ?: return println("Error: Port number must be provided for cli server. Use --gui for GUI.")
             val maxFib = args.getOrNull(2)?.toIntOrNull() ?: MAX_FIBONACCI
             if (maxFib > MAX_FIBONACCI) {
                 println("Max Fibonacci number cannot exceed $MAX_FIBONACCI or the client could throw an EOFException.")
@@ -367,7 +367,7 @@ fun runCli(args: Array<String>) {
 
         "client" -> {
             if (args.size < 3) {
-                println("Error: Insufficient arguments for client. Usage: client <host> <port>")
+                println("Error: Insufficient arguments for cli client. Usage: client <host> <port>. Use --gui for GUI.")
                 return
             }
             val host = args[1]
