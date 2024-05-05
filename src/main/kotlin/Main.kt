@@ -1,11 +1,22 @@
 package org.example
 
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.Button
+import androidx.compose.material.Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.application
 import kotlinx.coroutines.*
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.math.BigInteger
 import java.net.ServerSocket
 import java.net.Socket
+import java.net.SocketException
 import kotlin.math.abs
 
 fun fibonacci(n: Int): BigInteger {
@@ -75,52 +86,62 @@ suspend fun handleClient(client: Socket, maxFib: Int?) {
     }
 }
 
-fun runClient(host: String, port: Int) {
-    val client = Socket(host, port)
-    val input = DataInputStream(client.getInputStream())
-    val output = DataOutputStream(client.getOutputStream())
-
-    while (true) {
-        print("Enter a number (blank to exit): ")
-        val userInput = readlnOrNull() ?: ""
-        if (userInput.isBlank()) break
-
-        try {
-            val number = userInput.toInt()
-            output.writeInt(number)
-            val result = input.readUTF()
-            println("Fibonacci result: $result")
-        } catch (e: NumberFormatException) {
-            println("Invalid input. Please enter a valid integer.")
+suspend fun requestFibonacci(host: String, port: Int, number: Int): String {
+    return withContext(Dispatchers.IO) {
+        Socket(host, port).use { client ->
+            DataOutputStream(client.getOutputStream()).use { output ->
+                DataInputStream(client.getInputStream()).use { input ->
+                    output.writeInt(number)
+                    return@withContext input.readUTF()
+                }
+            }
         }
     }
-
-    client.close()
 }
 
 const val MAX_FIBONACCI = 313579
 
-fun main(args: Array<String>) {
-    if (args.size < 2) {
-        println("Usage: java -jar fibonacci.jar [server <port> [maxFib]] | [client <host> <port>]")
-        println("    server: Runs the server on the given port. Optionally specify a max Fibonacci number.")
-        println("    client: Connects to the server at <host>:<port> and starts the client.")
-        return
-    }
+fun main() = application {
+    Window(onCloseRequest = ::exitApplication, title = "Fibonacci Server and Client") {
+        var text by remember { mutableStateOf("") }
+        var serverLog by remember { mutableStateOf("Server is not running") }
+        val coroutineScope = rememberCoroutineScope()
 
-    when (args[0]) {
-        "server" -> {
-            val port = args[1].toInt()
-            // All Fibonacci numbers lower -313579 and higher 313580 cause an EOFException to the client in readUTF function
-            val maxFib = args.getOrNull(2)?.toInt() ?: MAX_FIBONACCI
-            if (maxFib > MAX_FIBONACCI) {
-                println("Max Fibonacci number cannot exceed $MAX_FIBONACCI or the client could throw an EOFException.")
-                return
+        Column(modifier = Modifier.padding(16.dp).fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("Enter port to start server:")
+            Row {
+                BasicTextField(value = text, onValueChange = { text = it })
+                Button(onClick = {
+                    coroutineScope.launch {
+                        serverLog = "Server running on port $text"
+                        runServer(text.toInt(), 1000)
+                    }
+                }) {
+                    Text("Start Server")
+                }
             }
-            runServer(port, maxFib)
-        }
+            Text(serverLog, modifier = Modifier.padding(top = 20.dp))
 
-        "client" -> runClient(args[1], args[2].toInt())
-        else -> println("Invalid mode. Use 'server' or 'client'.")
+            // Client UI
+            var serverIp by remember { mutableStateOf("") }
+            var port by remember { mutableStateOf("") }
+            var number by remember { mutableStateOf("") }
+            var result by remember { mutableStateOf("No result yet") }
+
+            Text("Server IP:")
+            BasicTextField(value = serverIp, onValueChange = { serverIp = it })
+            Text("Port:")
+            BasicTextField(value = port, onValueChange = { port = it })
+            Text("Number to calculate:")
+            BasicTextField(value = number, onValueChange = { number = it })
+            Button(onClick = {
+                coroutineScope.launch {
+                    result = requestFibonacci(serverIp, port.toInt(), number.toInt())
+                }
+            }) {
+                Text("Get Fibonacci")
+            }
+            Text("Result: $result", modifier = Modifier.padding(top = 20.dp))
+        }
     }
 }
