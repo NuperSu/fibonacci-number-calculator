@@ -186,6 +186,7 @@ fun ClientUI(ip: String, port: String, number: String, result: MutableState<Stri
     var serverIp by remember { mutableStateOf(ip) }
     var clientPort by remember { mutableStateOf(port) }
     var fibNumber by remember { mutableStateOf(number) }
+    val coroutineScope = rememberCoroutineScope()
 
     Text("Server IP:")
     BasicTextField(value = serverIp, onValueChange = { serverIp = it })
@@ -194,7 +195,11 @@ fun ClientUI(ip: String, port: String, number: String, result: MutableState<Stri
     Text("Number to calculate:")
     BasicTextField(value = fibNumber, onValueChange = { fibNumber = it })
     Button(onClick = {
-        onRequest(serverIp, clientPort, fibNumber)
+        coroutineScope.launch {
+            val fibResult = requestFibonacci(serverIp, clientPort.toInt(), fibNumber.toInt())
+            // Directly update the result within the same coroutine context
+            result.value = fibResult
+        }
     }) {
         Text("Get Fibonacci")
     }
