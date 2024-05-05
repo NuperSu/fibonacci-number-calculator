@@ -144,62 +144,76 @@ fun ServerUI(port: String) {
     var server by remember { mutableStateOf<ServerSocket?>(null) }
     var isStopping by remember { mutableStateOf(false) }  // Track if the server is stopping
 
-    Column {
-        Text("Enter port to start server:")
-        TextField(
+    Column(modifier = Modifier.padding(16.dp)) {
+        Text("Enter port to start server:", style = MaterialTheme.typography.h6)
+        OutlinedTextField(
             value = text,
             onValueChange = { text = it },
             singleLine = true,
-            label = { Text("Server Port") }
+            label = { Text("Server Port") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
         )
-        Text("Max Fibonacci number (optional):")
-        TextField(
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text("Max Fibonacci number (optional):", style = MaterialTheme.typography.h6)
+        OutlinedTextField(
             value = maxFibonacci,
             onValueChange = { maxFibonacci = it },
             singleLine = true,
-            label = { Text("Max Fibonacci") }
+            label = { Text("Max Fibonacci") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
         )
-        Row {
-            Button(onClick = {
-                if (!isStopping) {
-                    val portNumber = text.toIntOrNull() ?: 0
-                    val maxFib = maxFibonacci.toIntOrNull() ?: MAX_FIBONACCI
-                    serverLog =
-                        "Attempting to start server on port $text with max Fibonacci set to $maxFib"
+        Spacer(modifier = Modifier.height(16.dp))
 
-                    if (server?.isClosed != false) {
-                        server?.close()
-                        server = ServerSocket(portNumber).apply { reuseAddress = true }
-                        serverLog = "Starting server on port $portNumber"
-                        CoroutineScope(Dispatchers.IO).launch {
-                            try {
-                                server?.let { runServer(it, maxFib) }
-                            } catch (e: IOException) {
-                                serverLog = "Failed to start server: ${e.message}"
-                            } finally {
-                                server?.close()
-                                isStopping = false  // Reset stopping state when server is closed
+        Row {
+            Button(
+                onClick = {
+                    if (!isStopping) {
+                        val portNumber = text.toIntOrNull() ?: 0
+                        val maxFib = maxFibonacci.toIntOrNull() ?: MAX_FIBONACCI
+                        serverLog = "Attempting to start server on port $text with max Fibonacci set to $maxFib"
+
+                        if (server?.isClosed != false) {
+                            server?.close()
+                            server = ServerSocket(portNumber).apply { reuseAddress = true }
+                            serverLog = "Starting server on port $portNumber"
+                            CoroutineScope(Dispatchers.IO).launch {
+                                try {
+                                    server?.let { runServer(it, maxFib) }
+                                } catch (e: IOException) {
+                                    serverLog = "Failed to start server: ${e.message}"
+                                } finally {
+                                    server?.close()
+                                    isStopping = false  // Reset stopping state when server is closed
+                                }
                             }
                         }
                     }
-                }
-            }, enabled = !isStopping) {
+                },
+                enabled = !isStopping,
+                modifier = Modifier.weight(1f)
+            ) {
                 Text("Start Server")
             }
-            Button(onClick = {
-                isStopping = true  // Set the stopping state
-                server?.close()
-                serverLog = "Server stopping..."
-                CoroutineScope(Dispatchers.IO).launch {
-                    delay(1000)  // Allow some time for server to close properly
-                    isStopping = false  // Reset the stopping state
-                    serverLog = "Server stopped"
-                }
-            }) {
+            Spacer(modifier = Modifier.width(8.dp))
+            Button(
+                onClick = {
+                    isStopping = true  // Set the stopping state
+                    server?.close()
+                    serverLog = "Server stopping..."
+                    CoroutineScope(Dispatchers.IO).launch {
+                        delay(1000)  // Allow some time for server to close properly
+                        isStopping = false  // Reset the stopping state
+                        serverLog = "Server stopped"
+                    }
+                },
+                modifier = Modifier.weight(1f)
+            ) {
                 Text("Stop Server")
             }
         }
-        Text(serverLog, modifier = Modifier.padding(top = 20.dp))
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(serverLog, style = MaterialTheme.typography.body1, modifier = Modifier.padding(top = 20.dp))
     }
 }
 
@@ -270,7 +284,7 @@ fun ClientUI(
 }
 
 fun launchGui(args: Array<String>) = application {
-    var isServer by remember { mutableStateOf(false) }
+    var isClient by remember { mutableStateOf(true) }
     var serverPort by remember { mutableStateOf("") }
     var serverIp by remember { mutableStateOf("") }
     var clientPort by remember { mutableStateOf("") }
@@ -281,12 +295,12 @@ fun launchGui(args: Array<String>) = application {
     if (args.isNotEmpty()) {
         when (args[0]) {
             "server" -> {
-                isServer = true
+                isClient = false
                 serverPort = args.getOrNull(1) ?: ""
             }
 
             "client" -> {
-                isServer = false
+                isClient = true
                 serverIp = args.getOrNull(1) ?: ""
                 clientPort = args.getOrNull(2) ?: ""
             }
@@ -300,13 +314,11 @@ fun launchGui(args: Array<String>) = application {
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Server")
-                Switch(checked = isServer, onCheckedChange = { isServer = it })
+                Switch(checked = isClient, onCheckedChange = { isClient = it })
                 Text("Client")
             }
 
-            if (isServer) {
-                ServerUI(serverPort)
-            } else {
+            if (isClient) {
                 ClientUI(serverIp, clientPort, number, result) { ip, port, num ->
                     CoroutineScope(Dispatchers.IO).launch {
                         val fibResult = requestFibonacci(ip, port.toInt(), num.toInt())
@@ -315,6 +327,8 @@ fun launchGui(args: Array<String>) = application {
                         }
                     }
                 }
+            } else {
+                ServerUI(serverPort)
             }
         }
     }
