@@ -39,17 +39,21 @@ fun fibonacci(n: Int): BigInteger {
     return b
 }
 
-fun runServer(port: Int, maxFib: Int) = runBlocking {
+fun runServer(port: Int, maxFib: Int) {
     val server = ServerSocket(port)
-    println("Server running on port $port, max Fibonacci number set to: ${maxFib}")
+    println("Server running on port $port, max Fibonacci number set to: $maxFib")
 
-    coroutineScope {
-        while (isActive) {
+    try {
+        while (true) {
             val client = server.accept()
-            launch(Dispatchers.IO) {
+            GlobalScope.launch(Dispatchers.IO) {
                 handleClient(client, maxFib)
             }
         }
+    } catch (e: Exception) {
+        println("Server stopped: ${e.message}")
+    } finally {
+        server.close()
     }
 }
 
