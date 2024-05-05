@@ -143,6 +143,7 @@ fun ServerUI(port: String) {
     var maxFibonacci by remember { mutableStateOf(MAX_FIBONACCI.toString()) }
     var serverLog by remember { mutableStateOf("Server is not running") }
     var server by remember { mutableStateOf<ServerSocket?>(null) }
+    var isStopping by remember { mutableStateOf(false) }  // Track if the server is stopping
 
     Column {
         Text("Enter port to start server:")
@@ -161,30 +162,39 @@ fun ServerUI(port: String) {
         )
         Row {
             Button(onClick = {
-                val portNumber = text.toIntOrNull() ?: 0
-                val maxFib = maxFibonacci.toIntOrNull() ?: MAX_FIBONACCI
-                serverLog = "Attempting to start server on port $text with max Fibonacci set to $maxFib"
+                if (!isStopping) {
+                    val portNumber = text.toIntOrNull() ?: 0
+                    val maxFib = maxFibonacci.toIntOrNull() ?: MAX_FIBONACCI
+                    serverLog = "Attempting to start server on port $text with max Fibonacci set to $maxFib"
 
-                if (server?.isClosed != false) {
-                    server?.close()
-                    server = ServerSocket(portNumber).apply { reuseAddress = true }
-                    serverLog = "Starting server on port $portNumber"
-                    CoroutineScope(Dispatchers.IO).launch {
-                        try {
-                            server?.let { runServer(it, maxFib) }
-                        } catch (e: IOException) {
-                            serverLog = "Failed to start server: ${e.message}"
-                        } finally {
-                            server?.close()
+                    if (server?.isClosed != false) {
+                        server?.close()
+                        server = ServerSocket(portNumber).apply { reuseAddress = true }
+                        serverLog = "Starting server on port $portNumber"
+                        CoroutineScope(Dispatchers.IO).launch {
+                            try {
+                                server?.let { runServer(it, maxFib) }
+                            } catch (e: IOException) {
+                                serverLog = "Failed to start server: ${e.message}"
+                            } finally {
+                                server?.close()
+                                isStopping = false  // Reset stopping state when server is closed
+                            }
                         }
                     }
                 }
-            }) {
+            }, enabled = !isStopping) {
                 Text("Start Server")
             }
             Button(onClick = {
+                isStopping = true  // Set the stopping state
                 server?.close()
-                serverLog = "Server stopped"
+                serverLog = "Server stopping..."
+                CoroutineScope(Dispatchers.IO).launch {
+                    delay(1000)  // Allow some time for server to close properly
+                    isStopping = false  // Reset the stopping state
+                    serverLog = "Server stopped"
+                }
             }) {
                 Text("Stop Server")
             }
