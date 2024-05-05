@@ -5,6 +5,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.Button
 import androidx.compose.material.Switch
 import androidx.compose.material.Text
+import androidx.compose.material.TextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -139,46 +140,54 @@ suspend fun requestFibonacci(host: String, port: Int, number: Int): String {
 @Composable
 fun ServerUI(port: String) {
     var text by remember { mutableStateOf(port) }
-    var maxFibonacci by remember { mutableStateOf(MAX_FIBONACCI.toString()) } // Store as String for easy TextField handling
+    var maxFibonacci by remember { mutableStateOf(MAX_FIBONACCI.toString()) }
     var serverLog by remember { mutableStateOf("Server is not running") }
-    val coroutineScope = rememberCoroutineScope()
+    var serverJob by remember { mutableStateOf<Job?>(null) }
 
     Column {
         Text("Enter port to start server:")
-        BasicTextField(
+        TextField(
             value = text,
             onValueChange = { text = it },
-            singleLine = true
+            singleLine = true,
+            label = { Text("Server Port") }
         )
         Text("Max Fibonacci number (optional):")
-        BasicTextField(
+        TextField(
             value = maxFibonacci,
             onValueChange = { maxFibonacci = it },
-            singleLine = true
+            singleLine = true,
+            label = { Text("Max Fibonacci") }
         )
         Row {
             Button(onClick = {
-                val portNumber = text.toIntOrNull() ?: 0 // Safely parse the port number
-                val maxFib = maxFibonacci.toIntOrNull() ?: MAX_FIBONACCI // Safely parse the max Fibonacci number
-                coroutineScope.launch {
-                    // Update UI immediately before launching the server
-                    serverLog = "Attempting to start server on port $text with max Fibonacci set to $maxFib"
-                }
-                // Launch server in a non-blocking manner
-                GlobalScope.launch(Dispatchers.IO) {
-                    try {
-                        runServer(portNumber, maxFib)
-                        withContext(Dispatchers.Main) {
-                            serverLog = "Server running on port $text with max Fibonacci set to $maxFib"
-                        }
-                    } catch (e: Exception) {
-                        withContext(Dispatchers.Main) {
-                            serverLog = "Failed to start server: ${e.message}"
+                val portNumber = text.toIntOrNull() ?: 0
+                val maxFib = maxFibonacci.toIntOrNull() ?: MAX_FIBONACCI
+                serverLog = "Attempting to start server on port $text with max Fibonacci set to $maxFib"
+
+                if (serverJob?.isActive != true) {  // Check if the server is not already running
+                    serverJob = GlobalScope.launch(Dispatchers.IO) {  // Launch on IO Dispatcher
+                        try {
+                            runServer(portNumber, maxFib)
+                            withContext(Dispatchers.Main) {
+                                serverLog = "Server running on port $text with max Fibonacci set to $maxFib"
+                            }
+                        } catch (e: Exception) {
+                            withContext(Dispatchers.Main) {
+                                serverLog = "Failed to start server: ${e.message}"
+                            }
                         }
                     }
                 }
             }) {
                 Text("Start Server")
+            }
+            Button(onClick = {
+                serverJob?.cancel()
+                serverLog = "Server stopped"
+                serverJob = null
+            }) {
+                Text("Stop Server")
             }
         }
         Text(serverLog, modifier = Modifier.padding(top = 20.dp))
