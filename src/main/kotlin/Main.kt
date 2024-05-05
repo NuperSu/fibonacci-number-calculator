@@ -171,7 +171,8 @@ fun ServerUI(port: String) {
                     if (!isStopping) {
                         val portNumber = text.toIntOrNull() ?: 0
                         val maxFib = maxFibonacci.toIntOrNull() ?: MAX_FIBONACCI
-                        serverLog = "Attempting to start server on port $text with max Fibonacci set to $maxFib"
+                        serverLog =
+                            "Attempting to start server on port $text with max Fibonacci set to $maxFib"
 
                         if (server?.isClosed != false) {
                             server?.close()
@@ -184,7 +185,8 @@ fun ServerUI(port: String) {
                                     serverLog = "Failed to start server: ${e.message}"
                                 } finally {
                                     server?.close()
-                                    isStopping = false  // Reset stopping state when server is closed
+                                    isStopping =
+                                        false  // Reset stopping state when server is closed
                                 }
                             }
                         }
@@ -213,7 +215,11 @@ fun ServerUI(port: String) {
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
-        Text(serverLog, style = MaterialTheme.typography.body1, modifier = Modifier.padding(top = 20.dp))
+        Text(
+            serverLog,
+            style = MaterialTheme.typography.body1,
+            modifier = Modifier.padding(top = 20.dp)
+        )
     }
 }
 
