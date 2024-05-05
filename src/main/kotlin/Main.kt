@@ -40,9 +40,8 @@ fun fibonacci(n: Int): BigInteger {
     return b
 }
 
-fun runServer(port: Int, maxFib: Int) {
-    val server = ServerSocket(port)
-    println("Server running on port $port, max Fibonacci number set to: $maxFib")
+fun runServer(server: ServerSocket, maxFib: Int) {
+    println("Server running on port ${server.localPort}, max Fibonacci number set to: $maxFib")
 
     try {
         while (true) {
@@ -166,11 +165,15 @@ fun ServerUI(port: String) {
                 serverLog = "Attempting to start server on port $text with max Fibonacci set to $maxFib"
 
                 if (serverJob?.isActive != true) {  // Check if the server is not already running
+                    val server = ServerSocket(portNumber)
+                    server.reuseAddress = true
                     serverJob = GlobalScope.launch(Dispatchers.IO) {  // Launch on IO Dispatcher
                         try {
-                            runServer(portNumber, maxFib)
+                            runServer(server, maxFib)
                         } catch (e: Exception) {
                             serverLog = "Failed to start server: ${e.message}"
+                        } finally {
+                            server.close()
                         }
                     }
                 }
@@ -274,7 +277,14 @@ fun runCli(args: Array<String>) {
             if (maxFib > MAX_FIBONACCI) {
                 println("Max Fibonacci number cannot exceed $MAX_FIBONACCI or the client could throw an EOFException.")
             } else {
-                runServer(port, maxFib)
+                val server = ServerSocket(port)
+                try {
+                    runServer(server, maxFib)
+                } catch (e: Exception) {
+                    println("Failed to start server: ${e.message}")
+                } finally {
+                    server.close()
+                }
             }
         }
         "client" -> {
